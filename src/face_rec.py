@@ -17,31 +17,88 @@ import collections
 from sklearn.svm import SVC
 from math import sqrt
 import time
-# import serial
+import csv
+import mysql.connector
+from mysql.connector import Error
 
-# serial_port = serial.Serial("COM4", 9600)
-# serial_port.close()
-# serial_port.open()
 timeSent = None
 
+def import_mysql(user_id):
+
+    current_date = datetime.date.today().strftime("%Y-%m-%d")
+    current_time_ = datetime.datetime.now().strftime("%H:%M:%S")
+    try:
+        # Establish a connection to MySQL
+        # connection = mysql.connector.connect(**connection_config)
+        connection = mysql.connector.connect(
+        host="localhost",
+        user = "root",
+        passwd = "123456789",
+        database = "face_recorgnize",
+        )
+        cursor = connection.cursor()
+        cursor.execute("SHOW TABLES")
+        for db in cursor:
+            print(db)
+        data_test = [(user_id, current_date, current_time_)]
+
+        insert_query = f"INSERT INTO students (name, date, time) VALUES (%s, %s, %s)"
+        cursor.executemany(insert_query, data_test)
+
+        # # Commit the changes
+        connection.commit()
+
+    except Error as e:
+        print(f"Error: {e}")
+
+    finally:
+        # Close the connection
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+def import_csv(user_id):
+    current_date = datetime.date.today().strftime("%Y-%m-%d")
+    current_time_ = datetime.datetime.now().strftime("%H:%M:%S")
+    array = []
+    array.append(user_id)
+    array.append(current_date)
+    array.append(current_time_)
+    file_name_csv = "giam_sat_hoc_sinh_" + current_date + ".csv"
+    folder_name = "worklog"
+    file_path_csv = os.path.join(folder_name, file_name_csv)
+    with open(file_path_csv, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(array)
+    
+    
+    
 def register_log(user_id, current_time):
     global timeSent
     current_date = datetime.date.today().strftime("%Y-%m-%d")
+    current_time_ = datetime.datetime.now().strftime("%H:%M:%S")
+    # print(current_time_)
     file_name = current_date + ".txt"
     folder_name = "worklog"
     file_path = os.path.join(folder_name, file_name)
     with open(file_path, "a") as f:
-        f.write(f"\n{user_id} - {current_time}")
+        # row_count_txt = sum(1 for line in f)
+        f.write(f"\n{user_id}\t{current_date}\t{current_time_}")
         f.close()
-    # serial_port = serial.Serial("COM3", 9600, 0.5)
-    # serial_port.close()
-    # serial_port.open()
+    
+    # Replace these values with your specific details
+    file_path = file_path
+
+    mysql_table = 'students'
+
+    # Call the function to import data
+    import_mysql(user_id)
+    import_csv(user_id)
+
     
     if timeSent == None or time.time()*1000 - timeSent > 7000:
-        print("mo cua")
         timeSent = time.time()*1000
-        # serial_port.write('m'.encode())
-    # print(serial_port.readline())a
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -87,9 +144,9 @@ def main():
             people_detected = set()
             person_detected = collections.Counter()
 
-            # Lay hinh anh tu file video
-            # cap = cv2.VideoCapture(VIDEO_PATH)
             cap = cv2.VideoCapture(0)
+            # cap = cv2.VideoCapture("http://192.168.1.7:8080/video")
+
 
             while (cap.isOpened()):
                 start = time.time()
