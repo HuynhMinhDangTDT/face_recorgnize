@@ -50,8 +50,7 @@ def pass_score(accuracy_current):
                 # serial_port.write('m'.encode())
                 print("mo cua")
             else: 
-                # os.remove("facemodel.pkl")
-                update_model()
+                os.remove("facemodel.pkl")
                 raise ValueError(f"Current accuracy {accuracy_current} is less than previous accuracy {accuracy_threshold}")
             f.close()
     else:

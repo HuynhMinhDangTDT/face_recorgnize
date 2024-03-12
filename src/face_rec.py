@@ -17,90 +17,53 @@ import collections
 from sklearn.svm import SVC
 from math import sqrt
 import time
-import csv
-import mysql.connector
-from mysql.connector import Error
+from email.message import EmailMessage
+import ssl
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+# import serial
 
+# serial_port = serial.Serial("COM4", 9600)
+# serial_port.close()
+# serial_port.open()
 timeSent = None
 
-def import_mysql(user_id):
-
-    current_date = datetime.date.today().strftime("%Y-%m-%d")
-    current_time_ = datetime.datetime.now().strftime("%H:%M:%S")
-    try:
-        # Establish a connection to MySQL
-        # connection = mysql.connector.connect(**connection_config)
-        connection = mysql.connector.connect(
-        host="localhost",
-        user = "root",
-        passwd = "123456789",
-        database = "face_recorgnize",
-        )
-        cursor = connection.cursor()
-        cursor.execute("SHOW TABLES")
-        for db in cursor:
-            print(db)
-        data_test = [(user_id, current_date, current_time_)]
-
-        insert_query = f"INSERT INTO students (name, date, time) VALUES (%s, %s, %s)"
-        cursor.executemany(insert_query, data_test)
-
-        # # Commit the changes
-        connection.commit()
-
-    except Error as e:
-        print(f"Error: {e}")
-
-    finally:
-        # Close the connection
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
-
-def import_csv(user_id):
-    current_date = datetime.date.today().strftime("%Y-%m-%d")
-    current_time_ = datetime.datetime.now().strftime("%H:%M:%S")
-    array = []
-    array.append(user_id)
-    array.append(current_date)
-    array.append(current_time_)
-    file_name_csv = "giam_sat_hoc_sinh_" + current_date + ".csv"
-    folder_name = "worklog"
-    file_path_csv = os.path.join(folder_name, file_name_csv)
-    with open(file_path_csv, 'a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(array)
-    
-    
-    
 def register_log(user_id, current_time):
     global timeSent
     current_date = datetime.date.today().strftime("%Y-%m-%d")
-    current_time_ = datetime.datetime.now().strftime("%H:%M:%S")
-    # print(current_time_)
     file_name = current_date + ".txt"
     folder_name = "worklog"
     file_path = os.path.join(folder_name, file_name)
     with open(file_path, "a") as f:
-        # row_count_txt = sum(1 for line in f)
-        f.write(f"\n{user_id}\t{current_date}\t{current_time_}")
+        f.write(f"\n{user_id} - {current_time}")
         f.close()
+    # serial_port = serial.Serial("COM3", 9600, 0.5)
+    # serial_port.close()
+    # serial_port.open()
     
-    # Replace these values with your specific details
-    file_path = file_path
-
-    mysql_table = 'students'
-
-    # Call the function to import data
-    import_mysql(user_id)
-    import_csv(user_id)
-
-    
-    if timeSent == None or time.time()*1000 - timeSent > 7000:
-        timeSent = time.time()*1000
-
+    # if timeSent == None or time.time()*1000 - timeSent > 7000:
+    #     print("mo cua")
+    #     timeSent = time.time()*1000
+        # serial_port.write('m'.encode())
+    # print(serial_port.readline())
 
 def main():
+
+    email_sender = "nhatruongquanly@gmail.com"
+    # email_password = "Qlnn@123@"
+    email_password = "puqq hmra smkt dlkx"
+    email_receiver = ["thuannguyen7680@gmail.com","ntanphuc01@gmail.com","huynhphuclinh@gmail.com","vndang00@gmail.com"] #Email người nhận
+
+    subject = "[ Thư tự động - Không phản hồi]: Thông báo về tình trạng có người lạ vào nhà trường"
+    
+    msg = MIMEMultipart()
+    # msg["To"] = email_receiver
+    msg["To"] = ", ".join(email_receiver)
+    msg["From"] = email_sender
+    msg["subject"] = subject
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', help='Path of the video you want to test on.', default=1)
     args = parser.parse_args()
@@ -144,10 +107,10 @@ def main():
             people_detected = set()
             person_detected = collections.Counter()
 
+            # Lay hinh anh tu file video
+            # cap = cv2.VideoCapture(VIDEO_PATH)
             cap = cv2.VideoCapture(0)
-            # cap = cv2.VideoCapture("http://192.168.1.7:8080/video")
-
-
+            
             while (cap.isOpened()):
                 start = time.time()
                 # Doc tung frame
@@ -213,6 +176,27 @@ def main():
                             cv2.putText(frame, str(round(best_class_probabilities[0], 3)), (text_x, text_y + 17),
                                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         1, (255, 255, 255), thickness=1, lineType=2)
+                            if name == "Unknown":
+                                
+                                print("sending email...")
+                                current_time = datetime.datetime.now()
+                                # current_date = datetime.date.today().strftime("%Y-%m-%d")
+                                img_name = "image_unknown\\Unknown.jpg"
+                                
+                                # cv2.imwrite(img_name, frame)
+                                cv2.imwrite(filename=img_name, img=frame)
+                                
+                                msg_ready = MIMEText(f'Thư này nhằm thông báo đến nhóm phụ trách hệ thống là có người lạ vào trường.\nThời gian: {current_time} và hình ảnh người lạ vui lòng xem hình ảnh được hệ thống ghi nhận lại gửi kèm trong email này.\nVui lòng liên hệ với các bộ phận có liên quan để giải quyết vấn đề.\nTrân trọng!\nBan quản trị')
+                                msg.attach(msg_ready)
+                                image_open = open("image_unknown\\Unknown.jpg", 'rb').read()
+                                image_ready = MIMEImage(image_open,'jpg', name = 'Nguoi_la')
+                                msg.attach(image_ready)
+
+                                context = ssl.create_default_context()
+                                with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
+                                    smtp.login(email_sender, email_password)
+                                    smtp.sendmail(email_sender, email_receiver, msg.as_string())
+                                    
                             person_detected[best_name] += 1
                 except:
                     pass
